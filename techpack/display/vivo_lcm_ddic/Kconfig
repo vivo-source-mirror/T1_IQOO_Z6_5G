@@ -1,0 +1,6 @@
+config VIVO_LCM_DDIC
+	tristate "VIVO LCM for SM5109C"
+	depends on I2C && OF
+	help
+	  Say Y to enable the SM5109C DDIC driver for TI LMU devices.
+	  This supports the DDIC device SM5109C.

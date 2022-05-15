@@ -1,0 +1,193 @@
+# We can build either as part of a standalone Kernel build or as
+# an external module.  Determine which mechanism is being used
+ifeq ($(MODNAME),)
+	KERNEL_BUILD := 1
+else
+	KERNEL_BUILD := 0
+endif
+
+ifeq ($(KERNEL_BUILD), 1)
+	# These are configurable via Kconfig for kernel-based builds
+	# Need to explicitly configure for Android-based builds
+	AUDIO_BLD_DIR := $(shell pwd)/kernel/msm-5.4
+	AUDIO_ROOT := $(AUDIO_BLD_DIR)/techpack/audio
+endif
+
+ifeq ($(KERNEL_BUILD), 0)
+	ifeq ($(CONFIG_ARCH_SM8150), y)
+		ifdef CONFIG_SND_SOC_SA8155
+			include $(AUDIO_ROOT)/config/sa8155auto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/sa8155autoconf.h
+		else
+			include $(AUDIO_ROOT)/config/sm8150auto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/sm8150autoconf.h
+		endif
+	endif
+	ifeq ($(CONFIG_ARCH_SM6150), y)
+		ifdef CONFIG_SND_SOC_SA6155
+			include $(AUDIO_ROOT)/config/sa6155auto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/sa6155autoconf.h
+		else
+			include $(AUDIO_ROOT)/config/sm6150auto.conf
+			export
+			INCS    +=  -include $(AUDIO_ROOT)/config/sm6150autoconf.h
+		endif
+	endif
+	ifeq ($(CONFIG_ARCH_TRINKET), y)
+		include $(AUDIO_ROOT)/config/sm6150auto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/sm6150autoconf.h
+	endif
+	ifeq ($(CONFIG_ARCH_KONA), y)
+		include $(AUDIO_ROOT)/config/konaauto.conf
+		INCS    +=  -include $(AUDIO_ROOT)/config/konaautoconf.h
+	endif
+	ifeq ($(CONFIG_ARCH_LITO), y)
+		include $(AUDIO_ROOT)/config/litoauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/litoautoconf.h
+	endif
+	ifeq ($(CONFIG_ARCH_HOLI), y)
+		include $(AUDIO_ROOT)/config/holiauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/holiautoconf.h
+	endif
+	ifeq ($(CONFIG_ARCH_SDMSHRIKE), y)
+		include $(AUDIO_ROOT)/config/sm8150auto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/sm8150autoconf.h
+	endif
+	ifeq ($(CONFIG_ARCH_QCS405), y)
+		include $(AUDIO_ROOT)/config/qcs405auto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/qcs405autoconf.h
+	endif
+	ifeq ($(CONFIG_QTI_GVM), y)
+		include $(AUDIO_ROOT)/config/gvmauto.conf
+		export
+		INCS    +=  -include $(AUDIO_ROOT)/config/gvmautoconf.h
+	endif
+endif
+
+# As per target team, build is done as follows:
+# Defconfig : build with default flags
+# Slub      : defconfig  + CONFIG_SLUB_DEBUG := y +
+#	      CONFIG_SLUB_DEBUG_ON := y + CONFIG_PAGE_POISONING := y
+# Perf      : Using appropriate msmXXXX-perf_defconfig
+#
+# Shipment builds (user variants) should not have any debug feature
+# enabled. This is identified using 'TARGET_BUILD_VARIANT'. Slub builds
+# are identified using the CONFIG_SLUB_DEBUG_ON configuration. Since
+# there is no other way to identify defconfig builds, QTI internal
+# representation of perf builds (identified using the string 'perf'),
+# is used to identify if the build is a slub or defconfig one. This
+# way no critical debug feature will be enabled for perf and shipment
+# builds. Other OEMs are also protected using the TARGET_BUILD_VARIANT
+# config.
+
+############ UAPI ############
+UAPI_DIR :=	uapi/audio
+UAPI_INC :=	-I$(AUDIO_ROOT)/include/$(UAPI_DIR)
+
+############ COMMON ############
+COMMON_DIR :=	include
+COMMON_INC :=	-I$(AUDIO_ROOT)/$(COMMON_DIR)
+
+############ VIVO_CODEC ############
+ifdef CONFIG_SND_SOC_CODEC_COMMON
+	CODEC_COMMON_OBJS += vivo-codec-common.o
+endif
+
+ifdef CONFIG_SND_SOC_AW87339
+	AW87339_OBJS += aw87339/aw87339_audio.o
+endif
+
+ifdef CONFIG_SND_SOC_TFA9874
+	TFA9874_OBJS += tfa9874/tfa_container.o
+	TFA9874_OBJS += tfa9874/tfa_dsp.o
+	TFA9874_OBJS += tfa9874/tfa_init.o
+	TFA9874_OBJS += tfa9874/tfa98xx.o
+	TFA9874_OBJS += tfa9874/tfa9894-debug-common.o
+endif
+
+ifdef CONFIG_SND_SOC_TAS2562
+	TAS2562_OBJS += tas2562/tas2562-codec.o
+	TAS2562_OBJS += tas2562/tas2562-calib.o
+	TAS2562_OBJS += tas2562/tas2562-regmap.o
+	TAS2562_OBJS += tas2562/smartpa-debug-common.o
+endif
+
+ifdef CONFIG_SND_SOC_AW882XX
+	AW882XX_OBJS += aw882xx/aw882xx.o
+	AW882XX_OBJS += aw882xx/awinic_cali.o
+	AW882XX_OBJS += aw882xx/awinic_monitor.o
+	AW882XX_OBJS += aw882xx/awinic_dsp.o
+	AW882XX_OBJS += aw882xx/smartpa-debug-common.o
+endif
+LINUX_INC +=	-Iinclude/linux
+
+INCS +=		$(COMMON_INC) \
+		$(UAPI_INC)
+
+EXTRA_CFLAGS += $(INCS)
+
+
+CDEFINES +=	-DANI_LITTLE_BYTE_ENDIAN \
+		-DANI_LITTLE_BIT_ENDIAN \
+		-DDOT11F_LITTLE_ENDIAN_HOST \
+		-DANI_COMPILER_TYPE_GCC \
+		-DANI_OS_TYPE_ANDROID=6 \
+		-DPTT_SOCK_SVC_ENABLE \
+		-Wall\
+		-Werror\
+		-D__linux__
+
+KBUILD_CPPFLAGS += $(CDEFINES)
+
+# Currently, for versions of gcc which support it, the kernel Makefile
+# is disabling the maybe-uninitialized warning.  Re-enable it for the
+# AUDIO driver.  Note that we must use EXTRA_CFLAGS here so that it
+# will override the kernel settings.
+ifeq ($(call cc-option-yn, -Wmaybe-uninitialized),y)
+EXTRA_CFLAGS += -Wmaybe-uninitialized
+endif
+#EXTRA_CFLAGS += -Wmissing-prototypes
+
+ifeq ($(call cc-option-yn, -Wheader-guard),y)
+EXTRA_CFLAGS += -Wheader-guard
+endif
+
+ifeq ($(KERNEL_BUILD), 0)
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/ipc/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/dsp/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/asoc/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/asoc/codecs/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/soc/Module.symvers
+KBUILD_EXTRA_SYMBOLS +=$(OUT)/obj/vendor/qcom/opensource/audio-kernel/asoc/vivo/Module.symvers
+endif
+
+ifeq ($(CONFIG_SND_SOC_GCOV), y)
+GCOV_PROFILE := y
+endif
+
+# Module information used by KBuild framework
+obj-$(CONFIG_SND_SOC_CODEC_COMMON) += vivo_codec_common_dlkm.o
+vivo_codec_common_dlkm-y := $(CODEC_COMMON_OBJS)
+
+obj-$(CONFIG_SND_SOC_AW87339) += vivo_aw87339_dlkm.o
+vivo_aw87339_dlkm-y := $(AW87339_OBJS)
+
+obj-$(CONFIG_SND_SOC_TFA9874) += vivo_tfa9874_dlkm.o
+vivo_tfa9874_dlkm-y := $(TFA9874_OBJS)
+
+obj-$(CONFIG_SND_SOC_AW882XX) += vivo_aw882xx_dlkm.o
+vivo_aw882xx_dlkm-y := $(AW882XX_OBJS)
+
+obj-$(CONFIG_SND_SOC_TAS2562) += vivo_tas2562_dlkm.o
+vivo_tas2562_dlkm-y := $(TAS2562_OBJS)
+
+# inject some build related information
+DEFINES += -DBUILD_TIMESTAMP=\"$(shell date -u +'%Y-%m-%dT%H:%M:%SZ')\"

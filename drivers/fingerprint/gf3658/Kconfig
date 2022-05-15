@@ -1,0 +1,5 @@
+config BBK_GF3658
+	tristate "Goodix GF3658 fingerprint drvier support"
+	help
+	  Say Y here to enable goodix fingerprint driver support!
+

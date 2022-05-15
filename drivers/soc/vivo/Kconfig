@@ -1,0 +1,6 @@
+menu "SOC (System On Chip) specific Drivers"
+
+source "drivers/soc/vivo/src/Kconfig"
+source "drivers/soc/vivo/vivo_bsp_engine/Kconfig"
+
+endmenu

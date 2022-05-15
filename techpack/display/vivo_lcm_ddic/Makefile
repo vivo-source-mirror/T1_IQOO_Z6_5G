@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: GPL-2.0
+ifeq ($(CONFIG_VIVO_LCM_DDIC_SM5109C),)
+	CONFIG_VIVO_LCM_DDIC_SM5109C=y
+endif
+$(warning $(CONFIG_VIVO_LCM_DDIC_SM5109C))
+obj-$(CONFIG_VIVO_LCM_DDIC_SM5109C) += vivo_lcm_ddic.o

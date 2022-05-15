@@ -1,0 +1,4 @@
+config VIVO_BSP_ENGINE
+	tristate "vivo bsp engine"
+	help
+	  This module provides bsp common support, and some useful debug method.
